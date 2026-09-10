@@ -1,0 +1,37 @@
+name: CRM CI
+
+on:
+  pull_request:
+    branches:
+      - main
+      - v2.2-react
+  push:
+    branches:
+      - v2.3-sales-ux
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Domain smoke tests
+        run: npm test
+
+      - name: Production build
+        run: npm run build
