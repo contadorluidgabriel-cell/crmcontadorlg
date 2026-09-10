@@ -1,0 +1,22 @@
+{
+  "name": "crm-luid-gabriel",
+  "private": true,
+  "version": "2.2.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "node scripts/smoke.mjs"
+  },
+  "dependencies": {
+    "@fontsource/inter": "5.3.0",
+    "lucide-react": "1.44.0",
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "6.1.1",
+    "vite": "8.2.2"
+  }
+}
