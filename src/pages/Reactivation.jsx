@@ -1,0 +1,11 @@
+import React from 'react'
+import { useCrm } from '../context/CrmContext.jsx'
+import { getContact, lastInteractionDate, serviceNames } from '../lib/domain.js'
+import { dateBR, daysSince, todayStr } from '../lib/utils.js'
+export default function Reactivation({openOpportunity}){
+ const {state,reactivate,notify}=useCrm()
+ const due=state.opportunities.filter(o=>(o.stage==='Perdido'&&(!o.reactivationAt||o.reactivationAt<=todayStr()))||(o.stage==='Adiado'&&(!o.reactivationAt||o.reactivationAt<=todayStr()))).sort((a,b)=>daysSince(lastInteractionDate(b))-daysSince(lastInteractionDate(a)))
+ const scheduled=state.opportunities.filter(o=>['Perdido','Adiado'].includes(o.stage)&&o.reactivationAt&&o.reactivationAt>todayStr()).sort((a,b)=>a.reactivationAt.localeCompare(b.reactivationAt))
+ return <><div className="notice">Perdidos e adiados podem ter uma data de retorno. Quando a data chega, entram automaticamente em <b>Prontas para reativar</b>.</div><section className="panel table-wrap spaced"><header className="panel-head"><h2>Prontas para reativar</h2><span className="pill warning">{due.length}</span></header><Table list={due} ready state={state} openOpportunity={openOpportunity} onReactivate={id=>{reactivate(id);notify('Oportunidade reativada.')}}/></section><section className="panel table-wrap spaced"><header className="panel-head"><h2>Retornos agendados</h2><span className="pill neutral">{scheduled.length}</span></header><Table list={scheduled} state={state} openOpportunity={openOpportunity}/></section></>
+}
+function Table({list,ready,state,openOpportunity,onReactivate}){return <table><thead><tr><th>Lead</th><th>Serviços</th><th>Situação</th><th>Motivo</th><th>{ready?'Tempo parado':'Retomar em'}</th><th></th></tr></thead><tbody>{list.map(o=><tr key={o.id}><td><b>{getContact(state,o)?.name}</b></td><td>{serviceNames(o)}</td><td><span className={`pill ${o.stage==='Perdido'?'danger':'warning'}`}>{o.stage}</span></td><td>{o.lostReason||o.note||'—'}</td><td>{ready?`${daysSince(lastInteractionDate(o))} dias`:dateBR(o.reactivationAt)}</td><td>{ready&&<button className="btn small primary" onClick={()=>onReactivate(o.id)}>Reativar</button>}<button className="link-btn" onClick={()=>openOpportunity(o.id)}>Abrir</button></td></tr>)}{!list.length&&<tr><td colSpan="6"><div className="empty">Nenhuma oportunidade.</div></td></tr>}</tbody></table>}
