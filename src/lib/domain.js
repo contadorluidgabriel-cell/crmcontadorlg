@@ -30,23 +30,50 @@ export function scoreBreakdown(state,opp){
 }
 export const scoreLead=(state,opp)=>scoreBreakdown(state,opp).score
 export const stageAge=opp=>daysSince(opp.stageEnteredAt||opp.updatedAt||opp.createdAt)
-export const proposalExpiry=p=>{if(!p?.validity)return null;const delta=Math.ceil((new Date(`${p.validity}T12:00:00`)-new Date(`${todayStr()}T12:00:00`))/86400000);return delta}
-export const periodLabel=p=>p==='month'?'Este mês':p==='30'?'Últimos 30 dias':p==='7'?'Últimos 7 dias':'Todo período'
+export const proposalExpiry=p=>{if(!p?.validity)return null;return Math.ceil((new Date(`${p.validity}T12:00:00`)-new Date(`${todayStr()}T12:00:00`))/86400000)}
+export const periodLabel=p=>p==='today'?'Hoje':p==='month'?'Este mês':p==='30'?'Últimos 30 dias':p==='7'?'Últimos 7 dias':'Todo período'
 
 export function reportData(state,period='month'){
   const created=state.opportunities.filter(o=>periodMatches(o.createdAt,period))
   const won=state.opportunities.filter(o=>o.wonAt&&periodMatches(o.wonAt,period))
   const lost=state.opportunities.filter(o=>o.lostAt&&periodMatches(o.lostAt,period))
-  const decisions=[...won,...lost], conversion=decisions.length?won.length/decisions.length*100:0
+  const decisions=[...won,...lost],conversion=decisions.length?won.length/decisions.length*100:0
   const revenue=won.reduce((acc,o)=>{const t=opportunityTotals(o);acc.oneOff+=t.oneOff;acc.mrr+=t.mrr;return acc},{oneOff:0,mrr:0})
-  const bySource={}; created.forEach(o=>{const k=o.source||'Outro';bySource[k]??={leads:0,wins:0,oneOff:0,mrr:0};bySource[k].leads++})
+  const bySource={}
+  created.forEach(o=>{const k=o.source||'Outro';bySource[k]??={leads:0,wins:0,oneOff:0,mrr:0};bySource[k].leads++})
   won.forEach(o=>{const k=o.source||'Outro';bySource[k]??={leads:0,wins:0,oneOff:0,mrr:0};const t=opportunityTotals(o);bySource[k].wins++;bySource[k].oneOff+=t.oneOff;bySource[k].mrr+=t.mrr})
   const lossReasons={};lost.forEach(o=>lossReasons[o.lostReason||'Não informado']=(lossReasons[o.lostReason||'Não informado']||0)+1)
   return{created,won,lost,conversion,revenue,bySource,lossReasons}
 }
 
+const FUNNEL_STAGES=['Novo lead','Contato','Qualificação','Diagnóstico','Proposta','Negociação','Follow-up','Ganho']
+function maxReachedIndex(opp){
+  let max=0
+  const current=FUNNEL_STAGES.indexOf(opp.stage);if(current>=0)max=Math.max(max,current)
+  for(const h of opp.history||[]){for(const value of [h.toStage,h.fromStage]){const i=FUNNEL_STAGES.indexOf(value);if(i>=0)max=Math.max(max,i)}}
+  if(Object.keys(opp.diagnosis||{}).length)max=Math.max(max,FUNNEL_STAGES.indexOf('Diagnóstico'))
+  if((opp.proposals||[]).length)max=Math.max(max,FUNNEL_STAGES.indexOf('Proposta'))
+  if(opp.wonAt)max=FUNNEL_STAGES.indexOf('Ganho')
+  return max
+}
+
+export function funnelData(state,period='month'){
+  const cohort=state.opportunities.filter(o=>periodMatches(o.createdAt,period))
+  const rows=FUNNEL_STAGES.map((stage,index)=>({stage,count:cohort.filter(o=>maxReachedIndex(o)>=index).length}))
+  return rows.map((row,index)=>({...row,fromPrevious:index===0?100:(rows[index-1].count?row.count/rows[index-1].count*100:0),fromStart:cohort.length?row.count/cohort.length*100:0}))
+}
+
+export function cohortData(state,period='month'){
+  const cohort=state.opportunities.filter(o=>periodMatches(o.createdAt,period))
+  const won=cohort.filter(o=>o.stage==='Ganho'||o.wonAt),lost=cohort.filter(o=>o.stage==='Perdido'||o.lostAt)
+  const decisions=won.length+lost.length
+  const byService={}
+  cohort.forEach(o=>(o.items||[]).forEach(i=>{byService[i.name]??={entered:0,won:0,lost:0};byService[i.name].entered++;if(o.stage==='Ganho'||o.wonAt)byService[i.name].won++;if(o.stage==='Perdido'||o.lostAt)byService[i.name].lost++}))
+  return{cohort,won,lost,decisionConversion:decisions?won.length/decisions*100:0,overallWinRate:cohort.length?won.length/cohort.length*100:0,byService}
+}
+
 export function pipelineSummary(state){
-  const active=state.opportunities.filter(activeOpportunity), deferred=state.opportunities.filter(o=>o.stage==='Adiado')
+  const active=state.opportunities.filter(activeOpportunity),deferred=state.opportunities.filter(o=>o.stage==='Adiado')
   const sum=list=>list.reduce((a,o)=>{const t=opportunityTotals(o);a.oneOff+=t.oneOff;a.mrr+=t.mrr;return a},{oneOff:0,mrr:0})
   return{active,count:active.length,...sum(active),deferredCount:deferred.length,deferred:sum(deferred)}
 }
