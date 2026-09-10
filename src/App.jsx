@@ -31,7 +31,7 @@ function CrmApp(){
     relatorios:<Reports/>,
     configuracoes:<Settings/>,
   }
-  return <Shell view={view} setView={setView} onNew={()=>setNewLead({open:true,contact:null})}>
+  return <Shell view={view} setView={setView} onNew={()=>setNewLead({open:true,contact:null})} openOpportunity={openOpportunity}>
     {pages[view]}
     <NewOpportunityModal open={newLead.open} initialContact={newLead.contact} onClose={()=>setNewLead({open:false,contact:null})} onCreated={openOpportunity}/>
     <ActivityModal open={!!activity} opportunityId={activity?.opportunityId} activity={activity?.item} onClose={()=>setActivity(null)}/>
