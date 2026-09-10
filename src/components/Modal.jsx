@@ -1,0 +1,3 @@
+import React from 'react'
+import { X } from 'lucide-react'
+export default function Modal({open,title,subtitle,onClose,children,footer,size='md'}){if(!open)return null;return <><div className="modal-backdrop" onMouseDown={onClose}/><section className={`modal modal-${size}`} role="dialog" aria-modal="true" aria-label={title}><header className="modal-head"><div><h2>{title}</h2>{subtitle&&<p>{subtitle}</p>}</div><button className="icon-button" onClick={onClose} aria-label="Fechar"><X/></button></header><div className="modal-body">{children}</div>{footer&&<footer className="modal-foot">{footer}</footer>}</section></>}
