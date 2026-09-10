@@ -1,0 +1,29 @@
+import React from 'react'
+import { Activity, BarChart3, ChevronLeft, FileText, LayoutDashboard, Menu, MoreHorizontal, Plus, RefreshCcw, Settings, Target, Users } from 'lucide-react'
+
+const nav=[
+  ['central','Central Comercial',LayoutDashboard],['pipeline','Pipeline',Target],['leads','Leads',Users],['atividades','Atividades',Activity],['reativacao','Reativação',RefreshCcw],['propostas','Propostas',FileText],['relatorios','Relatórios',BarChart3],['configuracoes','Configurações',Settings],
+]
+const titles={
+  central:['Central Comercial','Prioridades, oportunidades e metas de hoje'],pipeline:['Pipeline de Vendas','Oportunidades organizadas por etapa'],leads:['Leads','Contatos e oportunidades comerciais'],atividades:['Atividades e Follow-ups','O que precisa ser feito e quando'],reativacao:['Reativação','Oportunidades antigas com potencial de retorno'],propostas:['Propostas','Versões, validade, implantação e mensalidade'],relatorios:['Relatórios Comerciais','Conversão, receita, MRR e origem'],configuracoes:['Configurações','Metas, serviços, mensagens e dados'],
+}
+export default function Shell({view,setView,onNew,children}){
+  const [collapsed,setCollapsed]=React.useState(()=>localStorage.getItem('crm_sidebar_collapsed')==='1')
+  const [mobile,setMobile]=React.useState(false)
+  const [title,sub]=titles[view]
+  const choose=v=>{setView(v);setMobile(false)}
+  const toggle=()=>setCollapsed(v=>{localStorage.setItem('crm_sidebar_collapsed',!v?'1':'0');return !v})
+  return <div className={`app-shell ${collapsed?'collapsed':''}`}>
+    <aside className={`sidebar ${mobile?'show':''}`}>
+      <div className="brand-row"><div className="brand-mark">LG</div><div className="brand-copy"><strong>Luid Gabriel</strong><span>CRM Comercial V2.2</span></div><button className="icon-button sidebar-toggle" onClick={toggle} aria-label="Recolher ou expandir menu"><ChevronLeft/></button></div>
+      <nav className="sidebar-nav" aria-label="Navegação principal">{nav.map(([id,label,Icon])=><button key={id} className={view===id?'active':''} onClick={()=>choose(id)}><Icon/><span>{label}</span></button>)}</nav>
+      <div className="sidebar-note"><b>CRM = comercial</b><br/>Depois do fechamento, a operação segue para o Meu Escritório Digital.</div>
+    </aside>
+    <main className="main-area">
+      <header className="topbar"><div className="topbar-title"><button className="icon-button mobile-menu" onClick={()=>setMobile(true)} aria-label="Abrir menu"><Menu/></button><div><h1>{title}</h1><p>{sub}</p></div></div><div className="top-actions"><button className="btn" onClick={()=>choose('atividades')}>Follow-ups</button><button className="btn primary" onClick={onNew}><Plus/>Novo lead</button></div></header>
+      <section className="content">{children}</section>
+    </main>
+    <nav className="mobile-bottom-nav">{nav.slice(0,4).map(([id,label,Icon])=><button key={id} className={view===id?'active':''} onClick={()=>choose(id)}><Icon/><span>{id==='central'?'Início':label}</span></button>)}<button onClick={()=>setMobile(true)}><MoreHorizontal/><span>Mais</span></button></nav>
+    {mobile&&<button className="mobile-overlay" onClick={()=>setMobile(false)} aria-label="Fechar menu"/>}
+  </div>
+}
