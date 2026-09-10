@@ -1,12 +1,10 @@
 # CRM Comercial — Contador Luid Gabriel
 
-## V2.2 React/JSX
+## V2.3 Sales UX
 
-Refatoração do CRM Comercial para React/JSX, mudando o modelo de dados para separar **Contato / Empresa / Oportunidade**.
+Evolução da arquitetura React/JSX com foco em velocidade de cadastro, execução comercial, propostas profissionais e métricas confiáveis.
 
-### Objetivo da arquitetura
-
-Um contato pode possuir várias oportunidades comerciais. Uma oportunidade pode conter vários serviços, propostas versionadas, atividades e histórico estruturado.
+### Modelo comercial
 
 ```text
 Contato
@@ -15,30 +13,26 @@ Contato
           ├─ Serviços
           ├─ Diagnóstico
           ├─ Propostas V1, V2, V3...
-          ├─ Atividades
+          ├─ Atividades / Follow-ups
           └─ Histórico
 ```
 
-### O que já está implementado
+### Melhorias da V2.3
 
-- Central Comercial com pipeline ativo separado de adiados.
-- Pipeline Kanban.
-- Contatos com múltiplas oportunidades.
-- Vários serviços na mesma oportunidade.
-- Diagnóstico comercial por serviço principal.
-- Propostas versionadas.
-- Receita avulsa separada de MRR.
-- Datas comerciais separadas: `createdAt`, `wonAt`, `lostAt`, `stageEnteredAt`, `reactivationAt`.
-- Relatórios por data real de entrada, ganho e perda.
-- Tempo na etapa.
-- Score de prioridade explicável.
-- Atividades e follow-ups.
-- Reativação de adiados e perdidos.
-- WhatsApp sem API com confirmação manual antes de registrar contato.
-- Catálogo de serviços configurável.
-- Backup/importação JSON.
-- Migração automática da V2.1 armazenada em `crm_luid_gabriel_v2` para o novo schema.
-- Design system único com Inter self-hosted e ícones SVG Lucide.
+- Cadastro rápido por padrão: nome, WhatsApp, origem e serviço.
+- Cadastro completo opcional sem atrapalhar a captação rápida.
+- Busca global por cliente, telefone, e-mail, empresa, CNPJ, serviço ou etapa.
+- Período global: hoje, 7 dias, 30 dias, este mês ou todo período.
+- Central Comercial separa pipeline atual de resultado do período.
+- Atividade pode ser concluída já criando o próximo follow-up.
+- Ficha da oportunidade dividida em componentes independentes.
+- Próxima ação ganha destaque e alerta quando está ausente.
+- Proposta com código, versão, escopo, exclusões, prazo, valores, condição e observações ao cliente.
+- Saída A4 profissional para imprimir ou salvar como PDF.
+- Produção comercial usa datas reais de ganho/perda.
+- Conversão por serviço usa coorte de entrada, evitando misturar vendas de meses diferentes.
+- Funil acumulado por etapa para localizar gargalos comerciais.
+- MRR permanece separado de receita avulsa.
 
 ### Stack
 
@@ -55,7 +49,7 @@ npm install
 npm run dev
 ```
 
-### Validar regras de domínio
+### Testes
 
 ```bash
 npm test
@@ -69,9 +63,10 @@ npm run build
 
 ## Branches
 
-- `main`: baseline da fase V2.1.
-- `v2.2-react`: nova arquitetura React/JSX.
+- `main`: baseline anterior à refatoração React.
+- `v2.2-react`: fundação Contatos + Oportunidades.
+- `v2.3-sales-ux`: experiência comercial e relatórios avançados.
 
-## Próximo passo técnico
+## Próximo passo após validação
 
-Quando o fluxo V2.2 estiver validado visualmente, a camada de persistência em `src/lib/storage.js` pode ser substituída por Supabase sem reescrever as páginas e componentes.
+Depois de validar a V2.3 visualmente e no fluxo real de vendas, a persistência em `src/lib/storage.js` pode ser substituída por Supabase sem reescrever a interface. A prioridade antes disso é manter GitHub → Vercel Preview automatizado e revisar o fluxo completo em desktop e mobile.
