@@ -5,9 +5,11 @@ on:
     branches:
       - main
       - v2.2-react
+      - v2.3-sales-ux
   push:
     branches:
       - v2.3-sales-ux
+      - v2.3.1-integrity
 
 permissions:
   contents: read
