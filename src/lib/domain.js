@@ -1,19 +1,64 @@
 import { clamp, daysSince, money, periodMatches, todayStr } from './utils.js'
+import { ACTIVE_STAGES, TERMINAL_STAGES } from '../data/catalog.js'
 
 export const getContact=(state,opp)=>state.contacts.find(c=>c.id===opp.contactId)
 export const getCompany=(state,opp)=>state.companies.find(c=>c.id===opp.companyId)
 export const getCurrentProposal=opp=>[...(opp.proposals||[])].sort((a,b)=>b.version-a.version)[0]||null
-export const proposalTotals=p=>({oneOff:(p?.items||[]).reduce((s,i)=>s+Number(i.oneOff||0),0)-Number(p?.discount||0),mrr:(p?.items||[]).reduce((s,i)=>s+Number(i.mrr||0),0)})
-export const opportunityTotals=opp=>{const p=getCurrentProposal(opp);return p?proposalTotals(p):{oneOff:(opp.items||[]).reduce((s,i)=>s+Number(i.oneOff||0),0),mrr:(opp.items||[]).reduce((s,i)=>s+Number(i.mrr||0),0)}}
+export const getAcceptedProposal=opp=>[...(opp.proposals||[])].filter(p=>p.status==='Aceita'||p.acceptedAt).sort((a,b)=>b.version-a.version)[0]||null
+
+const pct=(value,max=100)=>clamp(Number(value||0),0,max)
+export const normalizePricing=p=>({
+  oneOffDiscountType:p?.pricing?.oneOffDiscountType==='percent'?'percent':'amount',
+  oneOffDiscountValue:Math.max(0,Number(p?.pricing?.oneOffDiscountValue ?? (typeof p?.discount==='number'?p.discount:0) ?? 0)),
+  mrrDiscountPercent:pct(p?.pricing?.mrrDiscountPercent,100),
+  mrrDiscountType:p?.pricing?.mrrDiscountType==='temporary'?'temporary':'permanent',
+  mrrDiscountMonths:Math.max(0,Number(p?.pricing?.mrrDiscountMonths||0)),
+})
+export const proposalTotals=p=>{
+  const items=p?.items||[]
+  const tableOneOff=items.reduce((s,i)=>s+Number(i.tableOneOff ?? i.oneOff ?? 0),0)
+  const tableMrr=items.reduce((s,i)=>s+Number(i.tableMrr ?? i.mrr ?? 0),0)
+  const baseOneOff=items.reduce((s,i)=>s+Number(i.oneOff||0),0)
+  const baseMrr=items.reduce((s,i)=>s+Number(i.mrr||0),0)
+  const pricing=normalizePricing(p)
+  const oneOffDiscount=pricing.oneOffDiscountType==='percent'?baseOneOff*pct(pricing.oneOffDiscountValue)/100:Math.min(baseOneOff,pricing.oneOffDiscountValue)
+  const mrrDiscount=baseMrr*pct(pricing.mrrDiscountPercent)/100
+  return {
+    tableOneOff,tableMrr,baseOneOff,baseMrr,
+    oneOffDiscount,mrrDiscount,
+    oneOff:Math.max(0,baseOneOff-oneOffDiscount),
+    mrr:Math.max(0,baseMrr-mrrDiscount),
+    pricing,
+  }
+}
+export const snapshotTotals=s=>s?{oneOff:Number(s.oneOff||0),mrr:Number(s.mrr||0),tableOneOff:Number(s.tableOneOff??s.oneOff??0),tableMrr:Number(s.tableMrr??s.mrr??0),oneOffDiscount:Number(s.oneOffDiscount||0),mrrDiscount:Number(s.mrrDiscount||0)}:null
+export const opportunityTotals=opp=>{
+  if(opp?.wonSnapshot){const s=snapshotTotals(opp.wonSnapshot);return{...s,pricing:opp.wonSnapshot.pricing||{}}}
+  const p=getCurrentProposal(opp)
+  return p?proposalTotals(p):proposalTotals({items:opp?.items||[]})
+}
 export const serviceNames=opp=>(opp.items||[]).map(i=>i.name).join(' + ')||'Sem serviço'
 export const lastInteractionDate=opp=>{
   const dates=(opp.history||[]).filter(h=>['contact','proposal','diagnosis','stage','won','lost','reactivated','legacy'].includes(h.type)).map(h=>h.at).filter(Boolean).sort().reverse()
   return (dates[0]||opp.updatedAt||opp.createdAt||'').slice(0,10)
 }
-export const activeOpportunity=opp=>!['Ganho','Perdido','Adiado'].includes(opp.stage)
+export const activeOpportunity=opp=>ACTIVE_STAGES.includes(opp.stage)
 export const pipelineOpportunity=opp=>!['Perdido','Adiado'].includes(opp.stage)
+export const terminalOpportunity=opp=>TERMINAL_STAGES.includes(opp.stage)
+export const canSetStage=(opp,target)=>ACTIVE_STAGES.includes(opp?.stage)&&ACTIVE_STAGES.includes(target)
 export const nextActivity=(state,oppId)=>state.activities.filter(a=>a.opportunityId===oppId&&!a.done).sort((a,b)=>`${a.date}${a.time}`.localeCompare(`${b.date}${b.time}`))[0]||null
 export const isActivityOverdue=a=>!a.done&&(a.date<todayStr()||(a.date===todayStr()&&a.time&&a.time<new Date().toTimeString().slice(0,5)))
+
+export function createWonSnapshot(opp,proposal=getAcceptedProposal(opp)||getCurrentProposal(opp)){
+  const source=proposal||{items:opp.items||[],pricing:{}}
+  const t=proposalTotals(source)
+  return {
+    proposalId:proposal?.id||'',proposalVersion:Number(proposal?.version||0),
+    oneOff:t.oneOff,mrr:t.mrr,tableOneOff:t.tableOneOff,tableMrr:t.tableMrr,
+    oneOffDiscount:t.oneOffDiscount,mrrDiscount:t.mrrDiscount,pricing:structuredClone(t.pricing),
+    items:structuredClone(source.items||[]),capturedAt:new Date().toISOString(),
+  }
+}
 
 export function scoreBreakdown(state,opp){
   if(opp.stage==='Ganho')return{score:100,parts:[['Venda ganha',100]]}
