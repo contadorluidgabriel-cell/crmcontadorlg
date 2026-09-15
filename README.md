@@ -1,8 +1,10 @@
 # CRM Comercial — Contador Luid Gabriel
 
-## V2.3 Sales UX
+## V2.3.1 — versão oficial
 
-Evolução da arquitetura React/JSX com foco em velocidade de cadastro, execução comercial, propostas profissionais e métricas confiáveis.
+Versão oficial atual do CRM comercial do Contador Luid Gabriel.
+
+O sistema é focado em captação, qualificação, diagnóstico, propostas, negociação, follow-up, reativação, fechamento e acompanhamento de indicadores comerciais. Depois do fechamento, a operação do cliente segue para o Meu Escritório Digital.
 
 ### Modelo comercial
 
@@ -14,25 +16,29 @@ Contato
           ├─ Diagnóstico
           ├─ Propostas V1, V2, V3...
           ├─ Atividades / Follow-ups
-          └─ Histórico
+          ├─ Histórico
+          └─ Snapshot imutável da venda fechada
 ```
 
-### Melhorias da V2.3
+### V2.3.1
 
-- Cadastro rápido por padrão: nome, WhatsApp, origem e serviço.
-- Cadastro completo opcional sem atrapalhar a captação rápida.
+- Cadastro rápido com cadastro completo opcional.
 - Busca global por cliente, telefone, e-mail, empresa, CNPJ, serviço ou etapa.
-- Período global: hoje, 7 dias, 30 dias, este mês ou todo período.
-- Central Comercial separa pipeline atual de resultado do período.
-- Atividade pode ser concluída já criando o próximo follow-up.
-- Ficha da oportunidade dividida em componentes independentes.
-- Próxima ação ganha destaque e alerta quando está ausente.
-- Proposta com código, versão, escopo, exclusões, prazo, valores, condição e observações ao cliente.
-- Saída A4 profissional para imprimir ou salvar como PDF.
-- Produção comercial usa datas reais de ganho/perda.
-- Conversão por serviço usa coorte de entrada, evitando misturar vendas de meses diferentes.
-- Funil acumulado por etapa para localizar gargalos comerciais.
-- MRR permanece separado de receita avulsa.
+- Central Comercial com pipeline, prioridades, metas e leads parados.
+- Pipeline por etapas com receita avulsa e MRR separados.
+- Atividades e follow-ups com conclusão + próximo passo.
+- Reativação de oportunidades perdidas ou adiadas.
+- Propostas versionadas com escopo, exclusões, prazo, validade, valores e condições.
+- Preço de tabela e preço final separados.
+- Desconto avulso e mensal estruturado, permanente ou temporário, com teto comercial de 40%.
+- PDF/A4 comercial com preço-base, desconto e preço final.
+- Vendas ganhas congelam valores em `wonSnapshot`, preservando o histórico financeiro.
+- Transições comerciais protegidas contra estados contraditórios.
+- Relatórios por produção e por coorte.
+- Catálogo com IDs estáveis compatíveis com o futuro Analista de Proposta.
+- Schema 5 com migração segura do schema 4.
+- Backups validados e modo de recuperação para formatos não reconhecidos.
+- Proteção adicional contra sobrescrita entre abas.
 
 ### Stack
 
@@ -40,9 +46,9 @@ Contato
 - Vite
 - Lucide React
 - Fontsource Inter
-- localStorage como persistência temporária
+- `localStorage` como persistência local atual
 
-### Rodar localmente
+### Desenvolvimento
 
 ```bash
 npm install
@@ -63,10 +69,18 @@ npm run build
 
 ## Branches
 
-- `main`: baseline anterior à refatoração React.
-- `v2.2-react`: fundação Contatos + Oportunidades.
-- `v2.3-sales-ux`: experiência comercial e relatórios avançados.
+- `main`: **versão oficial atual — V2.3.1**.
+- `v2.3.1-integrity`: branch histórica da estabilização da V2.3.1.
+- `v2.3-sales-ux`: branch histórica da V2.3.
+- `v2.2-react`: fundação React anterior.
 
-## Próximo passo após validação
+## Próximas evoluções
 
-Depois de validar a V2.3 visualmente e no fluxo real de vendas, a persistência em `src/lib/storage.js` pode ser substituída por Supabase sem reescrever a interface. A prioridade antes disso é manter GitHub → Vercel Preview automatizado e revisar o fluxo completo em desktop e mobile.
+1. Importador JSON do **Analista de Proposta**.
+2. Validação funcional completa desktop/mobile da versão oficial.
+3. Publicação Vercel oficial conectada à `main`.
+4. Persistência em banco quando o modelo comercial estiver consolidado.
+
+### Regra de evolução
+
+Mudanças que afetem preços, propostas, etapas, migração ou dados históricos devem incluir teste de domínio antes de chegar à `main`.
