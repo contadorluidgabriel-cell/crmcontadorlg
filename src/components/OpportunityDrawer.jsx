@@ -8,7 +8,7 @@ import OpportunityActivities from './opportunity/OpportunityActivities.jsx'
 import OpportunityHistory from './opportunity/OpportunityHistory.jsx'
 import { useCrm } from '../context/CrmContext.jsx'
 import { getCompany, getContact, nextActivity, opportunityTotals, scoreBreakdown, serviceNames, stageAge } from '../lib/domain.js'
-import { addDays, dateBR, money, normPhone, todayStr } from '../lib/utils.js'
+import { addDays, dateBR, money, normDoc, normPhone, todayStr } from '../lib/utils.js'
 
 export default function OpportunityDrawer({id,initialTab='summary',onClose,openActivity}){
   const {state,updateContactCompany,setStage,saveDiagnosis,saveProposal,markWon,markLost,defer,recordContact,notify}=useCrm()
@@ -58,7 +58,12 @@ export default function OpportunityDrawer({id,initialTab='summary',onClose,openA
         {tab==='history'&&<OpportunityHistory opp={opp}/>} 
       </div>
     </aside>
-    <EditModal open={editOpen} onClose={()=>setEditOpen(false)} opp={opp} contact={contact} company={company} onSave={data=>{updateContactCompany(opp.id,data);setEditOpen(false);notify('Cadastro atualizado.')}}/>
+    <EditModal open={editOpen} onClose={()=>setEditOpen(false)} opp={opp} contact={contact} company={company} onSave={data=>{
+      const cnpj=normDoc(data.doc)
+      const duplicate=cnpj.length===14?state.companies.find(c=>c.id!==company?.id&&normDoc(c.doc)===cnpj):null
+      if(duplicate){notify(`Este CNPJ já está cadastrado em ${duplicate.name||'outra empresa'}. O cadastro não foi duplicado.`,'warning');return false}
+      updateContactCompany(opp.id,data);setEditOpen(false);notify('Cadastro atualizado.');return true
+    }}/>
     <ActionModal action={action} setAction={setAction} opp={opp} contact={contact} markWon={markWon} markLost={markLost} defer={defer} recordContact={recordContact} notify={notify}/>
   </>
 }
