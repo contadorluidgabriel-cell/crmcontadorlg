@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import { createSeed } from '../src/data/seed.js'
 import { activeOpportunity, canSetStage, cohortData, createWonSnapshot, funnelData, opportunityTotals, pipelineSummary, proposalTotals, reportData, serviceNames } from '../src/lib/domain.js'
 import { migrateLegacy, migrateV4ToV5, SCHEMA_VERSION, validateState } from '../src/lib/storage.js'
+import { applyAnalystImport, prepareAnalystImport } from '../src/lib/analystImport.js'
 import { todayStr } from '../src/lib/utils.js'
 
 const state=createSeed()
@@ -45,6 +46,44 @@ assert.equal(canSetStage(won,'Contato'),false,'Venda ganha não pode voltar para
 assert.equal(canSetStage({stage:'Proposta'},'Negociação'),true)
 assert.equal(canSetStage({stage:'Proposta'},'Ganho'),false,'Ganho deve usar ação específica')
 
+const analystFixture={
+  integration_version:'1.0',event:'proposal_analysis.approved',source:'analista_proposta',destination:'crm',export_id:'proposal_55881208000159_test',
+  contact:{name:null,phone:null,email:null},
+  company:{cnpj:'55881208000159',legal_name:'L.S PRIME COMERCIO ATACADISTA LTDA',trade_name:null,tax_regime:'SIMEI',employees:0,average_invoices_per_month:2,main_activity:{cnae:'46.42-7-02',description:'Comércio atacadista'}},
+  analysis:{status:'approved',confidence:'HIGH',current_situation:'Pendências acumuladas.',main_need:'Regularizar o MEI.',recommended_solution:'Regularização + Plano Essencial.'},
+  pains:[{type:'fiscal',description:'DAS em atraso.'}],alerts:[],
+  services:[
+    {service_id:null,service_name:'DASN-SIMEI — Declaração Anual do MEI',billing_type:'one_time',quantity:2,table_price:225,discount_percent:33.33,final_price:150},
+    {service_id:null,service_name:'Parcelamento de Débitos do MEI',billing_type:'one_time',quantity:1,table_price:150,discount_percent:33.33,final_price:100},
+    {service_id:null,service_name:'Plano Essencial — MEI',billing_type:'recurring',table_price:150,discount_percent:0,final_price:150,billing_frequency:'monthly'},
+  ],
+  prices:{one_time:{table_total:375,discount_total:125,final_total:250},recurring:{table_monthly_total:150,discount_monthly_total:0,final_monthly_total:150}},
+  scope:{initial_regularization:['Regularizar declarações e débitos'],monthly_plan:['Acompanhamento mensal']},
+  exclusions:['Taxas públicas'],deadline:{initial_regularization:'Após acessos.'},conditions:{initial_price:250,monthly_price:150,monthly_due_date_options:[10,15,20]},
+  internal_notes:{commercial_strategy:'Desconto só na entrada.',approved_structure:'R$ 250 + R$ 150/mês'},client_notes:{summary:'Regularização e acompanhamento.'},
+}
+const prepared=prepareAnalystImport(analystFixture,state.settings.services)
+assert.deepEqual(prepared.errors,[])
+assert.deepEqual(prepared.services.map(s=>s.serviceId),['MEI_DASN','MEI_PARCELAMENTO_RFB','MEI_ESSENCIAL'])
+assert.equal(prepared.totals.tableOneOff,375)
+assert.equal(prepared.totals.oneOffDiscount,125)
+assert.equal(prepared.totals.finalOneOff,250)
+assert.equal(prepared.totals.finalMrr,150)
+assert.equal(prepared.suggestedPrimaryServiceId,'MEI_ESSENCIAL')
+assert.throws(()=>applyAnalystImport(state,prepared),/contato responsável/i)
+const imported=applyAnalystImport(state,prepared,{contact:{name:'Contato Teste',phone:'91999999999'},source:'Indicação'})
+validateState(imported.state)
+const importedOpp=imported.state.opportunities.find(o=>o.id===imported.opportunityId)
+assert.equal(importedOpp.stage,'Proposta')
+assert.equal(importedOpp.primaryServiceId,'MEI_ESSENCIAL')
+assert.equal(importedOpp.proposals.length,1)
+assert.equal(importedOpp.proposals[0].status,'Rascunho')
+const importedTotals=proposalTotals(importedOpp.proposals[0])
+assert.equal(importedTotals.oneOff,250,'Importação não pode aplicar o desconto duas vezes')
+assert.equal(importedTotals.mrr,150)
+assert.equal(imported.state.companies.filter(c=>String(c.doc).replace(/\D/g,'')==='55881208000159').length,1)
+assert.throws(()=>applyAnalystImport(imported.state,prepared,{contactId:imported.contactId}),/export_id já foi importado/i)
+
 const legacy={settings:{services:[{name:'Contabilidade mensal',kind:'Recorrente',base:350}]},leads:[{id:'l1',name:'Teste',phone:'91999999999',company:'Teste LTDA',type:'ME',service:'Contabilidade mensal',stage:'Ganho',created:'2026-08-01',updated:todayStr(),wonAt:todayStr(),mrr:350,proposal:{monthly:350,status:'Aceita'},history:[]}],activities:[]}
 const migrated=migrateLegacy(legacy)
 validateState(migrated)
@@ -62,4 +101,4 @@ validateState(migratedV4)
 assert.ok(migratedV4.settings.services.some(s=>s.id==='MEI_ABERTURA'))
 assert.ok(migratedV4.settings.services.some(s=>s.id==='SN_ABERTURA'))
 
-console.log('CRM V2.3.1 integrity smoke tests: OK')
+console.log('CRM V2.3.2 smoke tests: OK')
