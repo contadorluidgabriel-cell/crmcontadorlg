@@ -1,8 +1,8 @@
 import { addDays, normDoc, normEmail, normPhone, nowIso, todayStr, uid } from './utils.js'
 
 const SERVICE_ALIASES = {
-  'dasn-simei declaracao anual do mei':'MEI_DASN',
-  'dasn-simei':'MEI_DASN',
+  'dasn simei declaracao anual do mei':'MEI_DASN',
+  'dasn simei':'MEI_DASN',
   'parcelamento de debitos do mei':'MEI_PARCELAMENTO_RFB',
   'parcelamento debitos mei':'MEI_PARCELAMENTO_RFB',
   'plano essencial mei':'MEI_ESSENCIAL',
@@ -54,7 +54,10 @@ function resolveService(rawService,catalog){
   }
   const wanted=normalizeText(rawService?.service_name)
   if(!wanted)return null
-  const aliasId=SERVICE_ALIASES[wanted]
+  let aliasId=SERVICE_ALIASES[wanted]
+  if(!aliasId&&wanted.includes('dasn simei'))aliasId='MEI_DASN'
+  if(!aliasId&&wanted.includes('parcelamento')&&wanted.includes('mei'))aliasId='MEI_PARCELAMENTO_RFB'
+  if(!aliasId&&wanted.includes('plano essencial')&&wanted.includes('mei'))aliasId='MEI_ESSENCIAL'
   if(aliasId){const found=catalog.find(s=>s.id===aliasId);if(found)return found}
   return catalog.find(s=>[s.name,s.proposalName].some(name=>normalizeText(name)===wanted))||null
 }
