@@ -10,6 +10,7 @@ import Leads from './pages/Leads.jsx'
 import Activities from './pages/Activities.jsx'
 import Reactivation from './pages/Reactivation.jsx'
 import Proposals from './pages/Proposals.jsx'
+import ImportAnalyst from './pages/ImportAnalyst.jsx'
 import Reports from './pages/Reports.jsx'
 import Settings from './pages/Settings.jsx'
 
@@ -28,6 +29,7 @@ function CrmApp(){
     atividades:<Activities openOpportunity={openOpportunity} openActivity={openActivity}/>,
     reativacao:<Reactivation openOpportunity={openOpportunity}/>,
     propostas:<Proposals openOpportunity={openOpportunity}/>,
+    importar:<ImportAnalyst openOpportunity={openOpportunity}/>,
     relatorios:<Reports/>,
     configuracoes:<Settings/>,
   }
